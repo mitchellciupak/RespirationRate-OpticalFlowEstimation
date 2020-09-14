@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# NEW
+Assets
+sampleVideo.mp4
+
 # C extensions
 *.so
 
