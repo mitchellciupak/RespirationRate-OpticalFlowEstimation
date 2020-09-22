@@ -8,7 +8,7 @@ feature_params = dict(maxCorners = 300, qualityLevel = 0.2, minDistance = 2, blo
 lk_params = dict(winSize = (15,15), maxLevel = 2, criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 
 # The video feed is read in as a VideoCapture object
-cap = cv.VideoCapture("sampleVideo5.mp4") #0,4,5
+cap = cv.VideoCapture("SampleVideos/sampleVideo5.mp4") #0,4,5
 
 # Variable for color to draw optical flow track
 color = (0, 255, 0)
