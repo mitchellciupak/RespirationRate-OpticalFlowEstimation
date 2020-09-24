@@ -9,3 +9,9 @@ Grabs frames from your webcam and feed them into the optical flow estimation cod
 [Nanonets](https://nanonets.com/blog/optical-flow/)
 
 [Optical Flow](https://www.one-tab.com/page/fdDNu3NITaW4M3AFyGGB1g)
+
+[Optical Flow 2](https://github.com/ynandwan/OpticalFlowRR/blob/master/rr.py)
+
+[Optical Flow 3](https://github.com/mayank31398/real-time-visual-respiration-rate-estimation-with-dynamic-scene-adaptation/tree/master/src)
+
+[Optical Flow 4](https://github.com/kevroy314/respmon)
