@@ -1,4 +1,4 @@
-# OpticalFlowEstimation
+# RespirationRate-OpticalFlowEstimation
 Grabs frames from your webcam and feed them into the optical flow estimation code you found, and then overlay the vectors on the live video.
 
 ## Resources
