@@ -1,126 +1,106 @@
-#Mitchell Ciupak adapted from https://github.com/ynandwan/OpticalFlowRR
-#Imports
-from __future__ import print_function
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import sys, os
-import cv2
 import numpy as np
-import scipy as sp
-import sys
-from numpy import linalg as LA
+import cv2
+import time
+#https://github.com/sahakorn/Python-optical-flow-tracking/blob/master/optical_flow.py
 
-#Macros
-SIZE = (160, 120)
-GRAD_SIZE = (int(160 * 0.25), int(120 * 0.25))
-FLOW_MEMORY = 0.85
-PFF_MEMORY = 0.85
-MA = 10
-SIGNAL_MEMORY = 0.80
-n = 0
+help_message = '''
+USAGE: optical_flow.py [<video_source>]
+Keys:
+ 1 - toggle HSV flow visualization
+ 2 - toggle glitch
+'''
+count = 0
 
-#File I/O
-prevGray = None
-rrsignal = []
-file_name = sys.argv[1]
-cap = cv2.VideoCapture(file_name)
-frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 
-allrn = []
-while (cap.isOpened()):
-    ret, frame = cap.read()
+def draw_flow(img, flow, step=16):
+    h, w = img.shape[:2]
+    y, x = np.mgrid[step / 2:h:step, step / 2:w:step].reshape(2, -1)
+    fx, fy = flow[y, x].T
+    lines = np.vstack([x, y, x + fx, y + fy]).T.reshape(-1, 2, 2)
+    lines = np.int32(lines + 0.5)
+    vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
-    if ret == True:
-        n += 1
-        frame = frame.astype(float)
-        gray_org = 0.29 * frame[:, :, 2] + 0.59 * frame[:, :, 1] + 0.11 * frame[:, :, 0]
-        gray_blur = cv2.GaussianBlur(gray_org, (21, 21), 8, borderType=0)
-        gray = cv2.resize(gray_blur, SIZE)
-        imx, imy = np.gradient(gray)
+    cv2.polylines(vis, lines, 0, (0, 255, 0))
+    for (x1, y1), (x2, y2) in lines:
+        cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
+    return vis
 
-        if (n == 1):
-            prevGray = gray
 
-        dn = prevGray - gray
-        prevGray = gray
-        gradNorm2 = np.multiply(imy, imy) + np.multiply(imx, imx)
-        gradNorm2[gradNorm2 < 9] = float("inf")
-        flowx = np.multiply(imx, dn) / gradNorm2
-        flowy = np.multiply(imy, dn) / gradNorm2
+def draw_hsv(flow):
+    h, w = flow.shape[:2]
+    fx, fy = flow[:, :, 0], flow[:, :, 1]
+    ang = np.arctan2(fy, fx) + np.pi
+    v = np.sqrt(fx * fx + fy * fy)
+    hsv = np.zeros((h, w, 3), np.uint8)
+    hsv[..., 0] = ang * (180 / np.pi / 2)
+    hsv[..., 1] = 255
+    hsv[..., 2] = np.minimum(v * 4, 255)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return bgr
 
-        flowx, flowy = cv2.resize(flowx, None, fx=0.25, fy=0.25), cv2.resize(flowy, None, fx=0.25, fy=0.25)
-        fn = np.hstack((flowx.flatten(), flowy.flatten()))
 
-        if (n == 1):
-            tflow = fn
-            dflow = fn
-            continue
+def warp_flow(img, flow):
+    h, w = flow.shape[:2]
+    flow = -flow
+    flow[:, :, 0] += np.arange(w)
+    flow[:, :, 1] += np.arange(h)[:, np.newaxis]
+    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
+    return res
 
-        tflow = FLOW_MEMORY * tflow + fn
-        mag = LA.norm(tflow)
 
-        if (mag > MA):
-            tflow = (tflow * MA) / mag
+if __name__ == '__main__':
+    import sys
 
-        if (dflow.dot(fn) > 0):
-            dflow = PFF_MEMORY * dflow + fn
-        else:
-            dflow = PFF_MEMORY * dflow - fn
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 0
 
-        mag = LA.norm(dflow)
-        if (mag > MA):
-            dflow = (dflow * MA) / mag
-        #
-        pffNorm = LA.norm(dflow)
-        rn = np.dot(tflow, dflow) / pffNorm
-        allrn.append(rn)
-        if (len(rrsignal) > 0):
-            rrsignal.append(rrsignal[-1] * SIGNAL_MEMORY + rn)
-        else:
-            rrsignal.append(0)
-        #
-        if n % 100 == 0:
-            print("n: {0}, this rr: {1}".format(n, rn))
-        #
+    cam = cv2.VideoCapture(fn)
+    ret, prev = cam.read()
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+    prevgray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
+    show_hsv = True
+    show_glitch = False
+    cur_glitch = prev.copy()
+
+    while True:
+        ret, img = cam.read()
+        vis = img.copy()
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        flow = cv2.calcOpticalFlowFarneback(prevgray, gray, 0.5, 5, 15, 3, 5, 1.1, cv2.OPTFLOW_FARNEBACK_GAUSSIAN)
+        prevgray = gray
+        cv2.imshow('flow', draw_flow(gray, flow))
+        if show_hsv:
+            gray1 = cv2.cvtColor(draw_hsv(flow), cv2.COLOR_BGR2GRAY)
+            thresh = cv2.threshold(gray1, 25, 255, cv2.THRESH_BINARY)[1]
+            thresh = cv2.dilate(thresh, None, iterations=2)
+            (cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # loop over the contours
+            for c in cnts:
+                # if the contour is too small, ignore it
+                (x, y, w, h) = cv2.boundingRect(c)
+                if w > 100 and h > 100 and w < 900 and h < 680:
+                    cv2.rectangle(vis, (x, y), (x + w, y + h), (0, 255, 0), 4)
+                    cv2.putText(vis, str(time.time()), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+
+            cv2.imshow('Image', vis)
+        if show_glitch:
+            cur_glitch = warp_flow(cur_glitch, flow)
+            cv2.imshow('glitch', cur_glitch)
+        ch = 0xFF & cv2.waitKey(5)
+        if ch == 27:
             break
-    else:
-        print("n: {0}".format(n))
-        break
+        if ch == ord('1'):
+            show_hsv = not show_hsv
+            print
+            'HSV flow visualization is', ['off', 'on'][show_hsv]
+        if ch == ord('2'):
+            show_glitch = not show_glitch
+            if show_glitch:
+                cur_glitch = img.copy()
+            print
+            'glitch is', ['off', 'on'][show_glitch]
 
-cap.release()
-cv2.destroyAllWindows()
-
-plot_rrsignal = np.array(rrsignal)
-sigl = len(rrsignal)
-plot_rrsignal = plot_rrsignal[int(sigl * 0.06): int(sigl * 0.94)]
-
-fig = plt.figure()
-plt.plot(plot_rrsignal[::int(frame_rate / 3)])
-plt.show()
-fig.savefig('rsignal_' + file_name + '.png')  # Use fig. here
-
-rrate = [0]
-hw = 12
-for k in range(len(rrsignal[2 * frame_rate:-2 * frame_rate])):
-    if (k < hw * frame_rate):
-        continue
-    # Pdb().set_trace()
-    fourier = abs(np.fft.fft(rrsignal[k - hw * frame_rate:k]))
-    N = fourier.size
-    fourier = fourier[:int(N / 2)]
-    freq = np.fft.fftfreq(N, d=1.0 / frame_rate)
-    freq = freq[:int(N / 2)]
-    m = max(fourier)
-    d = [i for i, j in enumerate(fourier) if j == m]
-    # Pdb().set_trace()
-    rrate.append(60 * freq[d])
-
-fig1 = plt.figure()
-plt.plot(rrate)
-plt.show()
-fig1.savefig('bpm_' + file_name + '.png')  # Use fig. here
-
-avg_rrate = sum(rrate) / len(rrate) * 1.0
-print("Average RR rate: %d" % avg_rrate)
+    cv2.destroyAllWindows()

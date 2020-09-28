@@ -124,3 +124,15 @@ fig1.savefig('bpm_' + file_name + '.png')  # Use fig. here
 
 avg_rrate = sum(rrate) / len(rrate) * 1.0
 print("Average RR rate: %d" % avg_rrate)
+
+
+#Fast breathing sample
+# n: 100, this rr: 3.5251808213334885
+# n: 200, this rr: 0.41059284205600627
+# n: 300, this rr: 2.078626586391098
+# n: 400, this rr: -0.22163602410905672
+# n: 500, this rr: 5.0181485621144555
+# n: 600, this rr: 3.6952834443784894
+# n: 700, this rr: 5.81976098438961
+# n: 800, this rr: -3.1580700624345694
+# n: 900, this rr: 2.790759134305223

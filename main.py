@@ -1,65 +1,88 @@
 import cv2 as cv
 import numpy as np
 
-# Parameters for Shi-Tomasi corner detection
-feature_params = dict(maxCorners = 300, qualityLevel = 0.2, minDistance = 2, blockSize = 7)
-
-# Parameters for Lucas-Kanade optical flow
+# Macros
+## Parameters for Harris corner detection  https://docs.opencv.org/3.0-beta/modules/imgproc/doc/feature_detection.html#goodfeaturestotrack
+feature_params = dict(maxCorners = 300, qualityLevel = 0.5, minDistance = 2, blockSize = 7)
+## Parameters for Lucas-Kanade optical flow https://docs.opencv.org/3.0-beta/modules/video/doc/motion_analysis_and_object_tracking.html#calcopticalflowpyrlk
 lk_params = dict(winSize = (15,15), maxLevel = 2, criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 
-# The video feed is read in as a VideoCapture object
-cap = cv.VideoCapture("SampleVideos/sampleVideo5.mp4") #0,4,5
+# Pull in video
+cap = cv.VideoCapture("SampleVideos/OpticalFlowSampleRR_FastBreaths.mp4")
+color = (255, 69, 0) #RGB to draw optical flow track
 
-# Variable for color to draw optical flow track
-color = (0, 255, 0)
-
-# ret = a boolean return value from getting the frame, first_frame = the first frame in the entire video sequence
-ret, first_frame = cap.read()
-
-# Converts frame to grayscale because we only need the luminance channel for detecting edges - less computationally expensive
+# Generate first frame and convert to grayscale
+isreadValid, first_frame = cap.read()
 prev_gray = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
 
-# Finds the strongest corners in the first frame by Shi-Tomasi method - we will track the optical flow for these corners
-# https://docs.opencv.org/3.0-beta/modules/imgproc/doc/feature_detection.html#goodfeaturestotrack
+# Find the strongest corners (Harris method)
 prev = cv.goodFeaturesToTrack(prev_gray, mask = None, **feature_params)
 
-# Creates an image filled with zero intensities with the same dimensions as the frame - for later drawing purposes
+# Create new frame to draw on
 mask = np.zeros_like(first_frame)
 
 while(cap.isOpened()):
-    # ret = a boolean return value from getting the frame, frame = the current frame being projected in the video
-    ret, frame = cap.read()
-    # Converts each frame to grayscale - we previously only converted the first frame to grayscale
+
+    # Generate new frame and convert to grayscale
+    isreadValid, frame = cap.read()
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+
     # Calculates sparse optical flow by Lucas-Kanade method
-    # https://docs.opencv.org/3.0-beta/modules/video/doc/motion_analysis_and_object_tracking.html#calcopticalflowpyrlk
     next, status, error = cv.calcOpticalFlowPyrLK(prev_gray, gray, prev, None, **lk_params)
-    # Selects good feature points for previous position
+
+    # Selects feature points noted for prev and next
     good_old = prev[status == 1]
-    # Selects good feature points for next position
     good_new = next[status == 1]
+
     # Draws the optical flow tracks
+    aArr = []
+    bArr = []
     for i, (new, old) in enumerate(zip(good_new, good_old)):
-        # Returns a contiguous flattened array as (x, y) coordinates for new point
-        a, b = new.ravel()
-        # Returns a contiguous flattened array as (x, y) coordinates for old point
-        c, d = old.ravel()
+
+        a, b = new.ravel() # Returns a contiguous flattened array as (x, y) coordinates for new point
+        aArr.append(a)
+        bArr.append(b)
+
+        c, d = old.ravel() # Returns a contiguous flattened array as (x, y) coordinates for old point
+
         # Draws line between new and old position with green color and 2 thickness
         mask = cv.line(mask, (a, b), (c, d), color, 2)
+
         # Draws filled circle (thickness of -1) at new position with green color and radius of 3
         frame = cv.circle(frame, (a, b), 3, color, -1)
-    # Overlays the optical flow tracks on the original frame
+
+    # Output Original Frame + optical flow tracks
     output = cv.add(frame, mask)
+
     # Updates previous frame
     prev_gray = gray.copy()
+
     # Updates previous good feature points
     prev = good_new.reshape(-1, 1, 2)
+
     # Opens a new window and displays the output frame
     cv.imshow("sparse optical flow", output)
-    # Frames are read by intervals of 10 milliseconds. The programs breaks out of the while loop when the user presses the 'q' key
-    if cv.waitKey(10) & 0xFF == ord('q'):
+
+    #Presses the 'q' key to break
+    if cv.waitKey(10) & 0xFF == ord('q'): #10 milliseconds
         break
+
+# Calculate Avg Displacement
+def dist(x1,y1,x2,y2):
+    return ((x2-x1)**2+(y2-y1)**2)**0.5
+
+avgDistArr = []
+for i in range(0,len(aArr) - 1):
+    avgDistArr.append(dist(aArr[i],bArr[i],aArr[i+1],bArr[i+1]))
+
+avg = sum(avgDistArr)/len(avgDistArr)
+print("Avg Change is", avg, " pixels/frame")
+
+#Todo Fourier Transform to BPM
+#print("Breaths Per Min is")
 
 # The following frees up resources and closes all windows
 cap.release()
 cv.destroyAllWindows()
+
+# Avg Change is 490.2776753874647
