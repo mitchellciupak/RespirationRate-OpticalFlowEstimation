@@ -15,3 +15,7 @@ Grabs frames from your webcam and feed them into the optical flow estimation cod
 [Optical Flow 3](https://github.com/mayank31398/real-time-visual-respiration-rate-estimation-with-dynamic-scene-adaptation/tree/master/src)
 
 [Optical Flow 4](https://github.com/kevroy314/respmon)
+
+[Optical Flow 5 - LK](https://docs.opencv.org/master/db/d7f/tutorial_js_lucas_kanade.html)
+
+[OpenCV Harris Edge Detector](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_features_harris/py_features_harris.html)
