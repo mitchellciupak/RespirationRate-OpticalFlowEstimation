@@ -26,3 +26,16 @@ def openCamera():
 
     # Change brightness (id 10)
     cap.set(setIDs["brightness"],100)
+
+def grayscaleImg(imgPath):
+    img = cv2.imread(imgPath)
+    imgGray = cv2.cvtColor(img,cv2.COLOR_BAYER_BG2GRAY)
+    cv2.imshow("Gray Output", imgGray)
+    cv2.waitkey(0)
+
+def blurImg(imgPath):
+    img = cv2.imread(imgPath)
+    imgGray = cv2.cvtColor(img,cv2.COLOR_BAYER_BG2GRAY)
+    imgBlur = cv2.GaussianBlur(imgGray, (7,7),0)
+    cv2.imshow("Blur Output", imgBlur)
+    cv2.waitkey(0)
