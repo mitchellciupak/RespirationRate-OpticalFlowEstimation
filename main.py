@@ -86,3 +86,8 @@ cap.release()
 cv.destroyAllWindows()
 
 # Avg Change is 490.2776753874647
+
+
+#collect all changes
+#take sum 
+#find mean
