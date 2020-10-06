@@ -39,5 +39,5 @@ def smartCombineImages(imgPath1,imgPath2):
     scale = 0.5
     imgStack = stackImages(scale,([img,img2],[img2,img])) #must have same number of cols and rows
 
-    cv2.imshow("Vert Output", imgVert)
+    cv2.imshow("Vert Output", imgStack)
     cv2.waitkey(0)
