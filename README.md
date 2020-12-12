@@ -1,5 +1,9 @@
 # RespirationRate-OpticalFlowEstimation
-Grabs frames from your webcam and feed them into the optical flow estimation code you found, and then overlay the vectors on the live video.
+Grabs frames from a video and feed them into the optical flow estimation code you found, and then overlay the vectors on the live video.
+
+# Usage
+Run opticalFlowRR.py with the arugment of the video you want to estimate. like this opticalFlowRR.py ./myvideo.mp4
+
 
 ## Resources
 ### OpenCV
